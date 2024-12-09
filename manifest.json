@@ -1,0 +1,19 @@
+{
+  "name": "Environment Notifier",
+  "version": "1.0",
+  "manifest_version": 3,
+  "description": "Alerts when on production environment (labflow.com).",
+  "content_scripts": [
+    {
+      "matches": ["*://*.labflow.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "permissions": ["tabs"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Environment Notifier"
+  }
+}
