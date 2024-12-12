@@ -13,6 +13,7 @@
         banner.style.left = '0';
         banner.style.width = '100%';
         banner.style.backgroundColor = 'red';
+        banner.style.backgroundColor = 'rgba(255, 0, 0, 0.7)'; // Set a semi-transparent red
         banner.style.color = 'white';
         banner.style.fontSize = '20px';
         banner.style.fontWeight = 'bold';
