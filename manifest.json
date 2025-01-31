@@ -1,19 +1,19 @@
 {
   "name": "Environment Notifier",
-  "version": "1.0",
+  "version": "2.0",
   "manifest_version": 3,
-  "description": "Alerts when on production environment (labflow.com).",
+  "description": "Color-coded transparent banners for various Labflow environments on .com and .ca.",
   "content_scripts": [
     {
-      "matches": ["*://*.labflow.com/*"],
+      "matches": [
+        "*://*.labflow.com/*",
+        "*://*.labflow.ca/*"
+      ],
       "js": ["content.js"]
     }
   ],
-  "permissions": ["tabs"],
+  "permissions": [],
   "background": {
     "service_worker": "background.js"
-  },
-  "action": {
-    "default_title": "Environment Notifier"
   }
 }
