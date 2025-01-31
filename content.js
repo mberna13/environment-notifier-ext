@@ -1,6 +1,6 @@
 // content.js
 
-// Define color & message for each environment on both .com and .ca.
+// Color & message for each environment on both .com and .ca.
 const environmentSettings = {
     // ---- Production ----
     'labflow.com': {
