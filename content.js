@@ -46,17 +46,24 @@ const environmentSettings = {
 // Shared banner style
 const bannerBaseStyle = {
     position: 'fixed',
-    top: '0',
-    left: '0',
-    width: '100%',
+    top: '0px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+
+    // Let it scale to 80% of the screen width but not exceed 600px
+    width: '80%',
+    maxWidth: '600px',
+
     color: 'white',
     fontSize: '20px',
     fontWeight: 'bold',
     textAlign: 'center',
-    zIndex: '999999',   // ensure it appears on top
-    padding: '10px 0',
-    fontFamily: 'sans-serif'
+    zIndex: '999999',
+    padding: '10px 20px',
+    fontFamily: 'sans-serif',
+    borderRadius: '6px'
 };
+
 
 // Grab the current hostname
 const hostname = window.location.hostname;
