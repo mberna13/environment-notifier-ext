@@ -40,6 +40,10 @@ const environmentSettings = {
     'staging.labflow.ca': {
         backgroundColor: 'rgba(0, 128, 0, 0.7)', // Green, 70% opacity
         message: 'You are on STAGING (staging.labflow.ca)'
+    },
+    'argon.labflow.com': {
+        backgroundColor: 'rgba(252,102,7,0.7)', // Green, 70% opacity
+        message: 'You are on ARGON (argon.labflow.com)'
     }
 };
 
