@@ -1,73 +1,85 @@
-// Helper function to set badge and icon
-const updateBadgeAndIcon = (tabId, url) => {
-    const hostname = new URL(url).hostname;
+// background.js — per-tab toolbar badge + icon, and click-to-toggle the banner.
+importScripts('envs.js');
 
-    let badgeText = '';
-    let badgeColor = '';
-    let iconPath = 'icons/default.png'; // Default icon
+const { detectEnv, regionName } = globalThis.EnvNotifier;
+const NEUTRAL = '#9e9e9e';
 
-    // Determine environment and corresponding badge/icon
-    if (hostname === 'labflow.com' || hostname === 'labflow.ca' || hostname === 'courses.catalystedu.com' || hostname === 'courses.catalyst-edu.ca') {
-        badgeText = 'PROD';
-        badgeColor = 'rgb(255,0,0)';
-        iconPath = 'icons/prod.png'; // Icon for production environment
-    } else if (hostname.startsWith('qa.labflow.com') || hostname.startsWith('qa.labflow.ca') || hostname.startsWith('qa.catalystedu.com') || hostname.startsWith('qa.catalyst-edu.ca')) {
-        badgeText = 'QA';
-        badgeColor = 'rgb(0,0,255)';
-        iconPath = 'icons/qa.png'; // Icon for QA environment
-    } else if (hostname.startsWith('dev.labflow.com') || hostname.startsWith('dev.labflow.ca') || hostname.startsWith('dev.catalystedu.com') || hostname.startsWith('dev.catalyst-edu.ca')) {
-        badgeText = 'DEV';
-        badgeColor = 'rgb(128,0,128)';
-        iconPath = 'icons/dev.png'; // Icon for development environment
-    } else if (hostname.startsWith('staging.labflow.com') || hostname.startsWith('staging.labflow.ca') || hostname.startsWith('staging.catalystedu.com') || hostname.startsWith('staging.catalyst-edu.ca')) {
-        badgeText = 'STG';
-        badgeColor = 'rgb(0,128,0)';
-        iconPath = 'icons/stg.png'; // Icon for staging environment
-    } else if (hostname.startsWith('uat.labflow.com') || hostname.startsWith('uat.labflow.ca') || hostname.startsWith('uat.catalystedu.com') || hostname.startsWith('uat.catalyst-edu.ca')) {
-        badgeText = 'UAT';
-        badgeColor = 'rgb(214,255,117)';
-        iconPath = 'icons/uat.png'; // Icon for UAT environment
-    } else if (hostname.startsWith('argon.labflow.com') || hostname.startsWith('argon.catalystedu.com')) {
-        badgeText = 'ARGON';
-        badgeColor = 'rgb(252,102,7)';
-        iconPath = 'icons/argon.png'; // Icon for Argon environment
-    } else if (hostname.startsWith('volt.catalystedu.com') || hostname.startsWith('volt.catalyst-edu.ca')) {
-        badgeText = 'VOLT';
-        badgeColor = 'rgb(255,215,0)';
-        iconPath = 'icons/volt.png'; // Icon for Volt environment
-    } else if (hostname.startsWith('ideas.catalystedu.com')) {
-        badgeText = 'IDEAS';
-        badgeColor = 'rgb(75,0,130)';
-        iconPath = 'icons/ideas.png'; // Icon for Ideas environment
+let bannerEnabled = true;
+const ready = chrome.storage.local.get({ bannerEnabled: true }).then((v) => {
+    bannerEnabled = v.bannerEnabled;
+});
+
+// Draw the toolbar icon: a filled rounded square in the env color.
+// When the banner is hidden it's drawn hollow with a slash through it.
+const drawIcon = (color, enabled) => {
+    const imageData = {};
+    for (const size of [16, 32]) {
+        const c = new OffscreenCanvas(size, size);
+        const ctx = c.getContext('2d');
+        const pad = size / 8, r = size / 5, w = size - pad * 2;
+        ctx.beginPath();
+        ctx.roundRect(pad, pad, w, w, r);
+        if (enabled) {
+            ctx.fillStyle = color;
+            ctx.fill();
+            // little "banner" bar along the top
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.fillRect(pad + w * 0.25, pad + w * 0.18, w * 0.5, w * 0.16);
+        } else {
+            ctx.lineWidth = size / 8;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(pad, size - pad);
+            ctx.lineTo(size - pad, pad);
+            ctx.stroke();
+        }
+        imageData[size] = ctx.getImageData(0, 0, size, size);
     }
-
-    // Update badge text and color
-    chrome.action.setBadgeText({ text: badgeText, tabId: tabId });
-    chrome.action.setBadgeBackgroundColor({ color: badgeColor, tabId: tabId });
-
-    // Update the icon
-    chrome.action.setIcon({ path: iconPath, tabId: tabId });
+    return imageData;
 };
 
-// Listen for tab URL updates
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.url) {
-        updateBadgeAndIcon(tabId, changeInfo.url);
-    }
-});
+const updateTab = async (tabId, url) => {
+    await ready;
+    let hostname = '';
+    try { hostname = new URL(url).hostname; } catch { /* chrome://, about:blank, etc. */ }
+    const env = detectEnv(hostname);
 
-// Listen for tab activation (switching between tabs)
-chrome.tabs.onActivated.addListener((activeInfo) => {
-    chrome.tabs.get(activeInfo.tabId, (tab) => {
-        if (tab.url) {
-            updateBadgeAndIcon(activeInfo.tabId, tab.url);
+    const state = bannerEnabled ? 'banner on — click for options' : 'banner hidden — click for options';
+    const title = env
+        ? `${env.label}${env.region ? ' · ' + regionName(env.region) : ''} (${hostname})\n${state}`
+        : `Environment Notifier\n${state}`;
+
+    try {
+        await chrome.action.setBadgeText({ tabId, text: env ? env.badge : '' });
+        if (env) {
+            await chrome.action.setBadgeBackgroundColor({ tabId, color: env.color });
+            await chrome.action.setBadgeTextColor({ tabId, color: env.fg });
         }
-    });
+        await chrome.action.setIcon({ tabId, imageData: drawIcon(env ? env.color : NEUTRAL, bannerEnabled) });
+        await chrome.action.setTitle({ tabId, title });
+    } catch {
+        // tab closed mid-update
+    }
+};
+
+const updateAllTabs = async () => {
+    const tabs = await chrome.tabs.query({});
+    await Promise.all(tabs.map((t) => updateTab(t.id, t.url)));
+};
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.url || changeInfo.status === 'loading') updateTab(tabId, tab.url);
 });
 
-// Set badge and icon on extension load (for currently active tab)
-chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0] && tabs[0].url) {
-        updateBadgeAndIcon(tabs[0].id, tabs[0].url);
+// Banner on/off and opacity are set from the popup (popup.html); the badge always stays.
+chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.bannerEnabled) {
+        bannerEnabled = changes.bannerEnabled.newValue;
+        updateAllTabs();
     }
 });
+
+chrome.runtime.onInstalled.addListener(updateAllTabs);
+chrome.runtime.onStartup.addListener(updateAllTabs);
+updateAllTabs();

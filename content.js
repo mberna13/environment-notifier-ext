@@ -1,163 +1,72 @@
-// content.js
+// content.js — slim environment banner at the top of the page.
+// Visibility follows the global "bannerEnabled" setting, toggled from the toolbar icon.
 
-// Color & message for each environment on both .com and .ca.
-const environmentSettings = {
-    // ---- Production ----
-    'labflow.com': {
-        backgroundColor: 'rgba(255, 0, 0, 0.7)', // Red, 70% opacity
-        message: 'WARNING: You are on PRODUCTION (labflow.com)'
-    },
-    'labflow.ca': {
-        backgroundColor: 'rgba(255, 0, 0, 0.7)', // Red, 70% opacity
-        message: 'WARNING: You are on PRODUCTION (labflow.ca)'
-    },
-    'courses.catalystedu.com': {
-        backgroundColor: 'rgba(255, 0, 0, 0.7)', // Red, 70% opacity
-        message: 'WARNING: You are on PRODUCTION (courses.catalystedu.com)'
-    },
-    'courses.catalyst-edu.ca': {
-        backgroundColor: 'rgba(255, 0, 0, 0.7)', // Red, 70% opacity
-        message: 'WARNING: You are on PRODUCTION (courses.catalyst-edu.ca)'
-    },
+(() => {
+    const env = globalThis.EnvNotifier.detectEnv(window.location.hostname);
+    if (!env || window.top !== window) return;
 
-    // ---- QA ----
-    'qa.labflow.com': {
-        backgroundColor: 'rgba(0, 0, 255, 0.7)', // Blue, 70% opacity
-        message: 'You are on QA (qa.labflow.com)'
-    },
-    'qa.labflow.ca': {
-        backgroundColor: 'rgba(0, 0, 255, 0.7)', // Blue, 70% opacity
-        message: 'You are on QA (qa.labflow.ca)'
-    },
-    'qa.catalystedu.com': {
-        backgroundColor: 'rgba(0, 0, 255, 0.7)', // Blue, 70% opacity
-        message: 'You are on QA (qa.catalystedu.com)'
-    },
-    'qa.catalyst-edu.ca': {
-        backgroundColor: 'rgba(0, 0, 255, 0.7)', // Blue, 70% opacity
-        message: 'You are on QA (qa.catalyst-edu.ca)'
-    },
+    const region = globalThis.EnvNotifier.regionName(env.region);
+    const isProd = env.key === 'prod';
 
-    // ---- Dev ----
-    'dev.labflow.com': {
-        backgroundColor: 'rgba(128, 0, 128, 0.7)', // Purple, 70% opacity
-        message: 'You are on DEV (dev.labflow.com)'
-    },
-    'dev.labflow.ca': {
-        backgroundColor: 'rgba(128, 0, 128, 0.7)', // Purple, 70% opacity
-        message: 'You are on DEV (dev.labflow.ca)'
-    },
-    'dev.catalystedu.com': {
-        backgroundColor: 'rgba(128, 0, 128, 0.7)', // Purple, 70% opacity
-        message: 'You are on DEV (dev.catalystedu.com)'
-    },
-    'dev.catalyst-edu.ca': {
-        backgroundColor: 'rgba(128, 0, 128, 0.7)', // Purple, 70% opacity
-        message: 'You are on DEV (dev.catalyst-edu.ca)'
-    },
+    // Shadow DOM so page CSS can't restyle (or hide) the banner.
+    const host = document.createElement('env-notifier-banner');
+    const shadow = host.attachShadow({ mode: 'closed' });
+    shadow.innerHTML = `
+        <style>
+            :host { all: initial; }
+            .pill {
+                position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+                z-index: 2147483647; pointer-events: none;
+                display: flex; align-items: center; gap: 6px;
+                padding: 4px 18px; border-radius: 0 0 8px 8px;
+                background: color-mix(in srgb, ${env.color} var(--alpha, 55%), transparent);
+                color: ${env.fg}; opacity: var(--text-opacity, 0.85);
+                text-shadow: 0 0 3px ${env.fg === '#fff' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)'};
+                font: 700 14px/20px system-ui, -apple-system, 'Segoe UI', sans-serif;
+                letter-spacing: 0.06em; white-space: nowrap;
+            }
+            .region { font-weight: 400; opacity: 0.85; }
+            .host { display: none; letter-spacing: 0.02em; }
+            .show-host .host { display: inline; }
+            .frame {
+                position: fixed; inset: 0; z-index: 2147483646; pointer-events: none;
+                box-shadow: inset 0 0 0 3px ${env.color};
+            }
+        </style>
+        ${isProd ? '<div class="frame"></div>' : ''}
+        <div class="pill">
+            <span>${isProd ? '⚠ ' : ''}${env.label}</span>
+            ${region ? `<span class="region">· ${region}</span>` : ''}
+            <span class="region host">· ${window.location.hostname}</span>
+        </div>
+    `;
 
-    // ---- Staging ----
-    'staging.labflow.com': {
-        backgroundColor: 'rgba(0, 128, 0, 0.7)', // Green, 70% opacity
-        message: 'You are on STAGING (staging.labflow.com)'
-    },
-    'staging.labflow.ca': {
-        backgroundColor: 'rgba(0, 128, 0, 0.7)', // Green, 70% opacity
-        message: 'You are on STAGING (staging.labflow.ca)'
-    },
-    'staging.catalystedu.com': {
-        backgroundColor: 'rgba(0, 128, 0, 0.7)', // Green, 70% opacity
-        message: 'You are on STAGING (staging.catalystedu.com)'
-    },
-    'staging.catalyst-edu.ca': {
-        backgroundColor: 'rgba(0, 128, 0, 0.7)', // Green, 70% opacity
-        message: 'You are on STAGING (staging.catalyst-edu.ca)'
-    },
+    const setVisible = (enabled) => {
+        host.style.display = enabled === false ? 'none' : '';
+    };
 
-    // ---- UAT ----
-    'uat.labflow.com': {
-        backgroundColor: 'rgba(14,230,207,0.7)', // Light Green, 70% opacity
-        message: 'You are on UAT (uat.labflow.com)'
-    },
-    'uat.labflow.ca': {
-        backgroundColor: 'rgba(14,230,207,0.7)', // Light Green, 70% opacity
-        message: 'You are on UAT (uat.labflow.ca)'
-    },
-    'uat.catalystedu.com': {
-        backgroundColor: 'rgba(14,230,207,0.7)', // Light Green, 70% opacity
-        message: 'You are on UAT (uat.catalystedu.com)'
-    },
-    'uat.catalyst-edu.ca': {
-        backgroundColor: 'rgba(14,230,207,0.7)', // Light Green, 70% opacity
-        message: 'You are on UAT (uat.catalyst-edu.ca)'
-    },
+    // Opacity slider (10–100): sets the background's solidity; the text fades
+    // less than the background so it stays readable at low settings.
+    const setOpacity = (pct) => {
+        host.style.setProperty('--alpha', `${pct}%`);
+        host.style.setProperty('--text-opacity', String(0.6 + 0.4 * (pct / 100)));
+    };
 
-    // ---- Argon ----
-    'argon.labflow.com': {
-        backgroundColor: 'rgba(252,102,7,0.7)', // Orange, 70% opacity
-        message: 'You are on ARGON (argon.labflow.com)'
-    },
-    'argon.catalystedu.com': {
-        backgroundColor: 'rgba(252,102,7,0.7)', // Orange, 70% opacity
-        message: 'You are on ARGON (argon.catalystedu.com)'
-    },
+    const pill = shadow.querySelector('.pill');
+    const setShowHost = (show) => pill.classList.toggle('show-host', !!show);
 
-    // ---- Volt ----
-    'volt.catalystedu.com': {
-        backgroundColor: 'rgba(255, 215, 0, 0.7)', // Gold, 70% opacity
-        message: 'You are on VOLT (volt.catalystedu.com)'
-    },
-    'volt.catalyst-edu.ca': {
-        backgroundColor: 'rgba(255, 215, 0, 0.7)', // Gold, 70% opacity
-        message: 'You are on VOLT (volt.catalyst-edu.ca)'
-    },
+    setVisible(true);
+    document.documentElement.appendChild(host);
 
-    // ---- Ideas ----
-    'ideas.catalystedu.com': {
-        backgroundColor: 'rgba(75, 0, 130, 0.7)', // Indigo, 70% opacity
-        message: 'You are on IDEAS (ideas.catalystedu.com)'
-    }
-};
-
-// Shared banner style
-const bannerBaseStyle = {
-    position: 'fixed',
-    top: '0px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-
-    // Let it scale to 80% of the screen width but not exceed 600px
-    width: '80%',
-    maxWidth: '600px',
-
-    color: 'white',
-    fontSize: '20px',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    zIndex: '999999',
-    padding: '10px 20px',
-    fontFamily: 'sans-serif',
-    borderRadius: '6px'
-};
-
-
-// Grab the current hostname
-const hostname = window.location.hostname;
-
-// If the hostname is one we recognize, create a banner
-const envConfig = environmentSettings[hostname];
-if (envConfig) {
-    const banner = document.createElement('div');
-    banner.textContent = envConfig.message;
-
-    // Apply the base style
-    Object.keys(bannerBaseStyle).forEach((key) => {
-        banner.style[key] = bannerBaseStyle[key];
+    chrome.storage.local.get({ bannerEnabled: true, bannerOpacity: 55, bannerShowHost: false }, (s) => {
+        setVisible(s.bannerEnabled);
+        setOpacity(s.bannerOpacity);
+        setShowHost(s.bannerShowHost);
     });
-
-    // Apply environment-specific background color
-    banner.style.backgroundColor = envConfig.backgroundColor;
-
-    // Append banner to the top of the page
-    document.body.appendChild(banner);
-}
+    chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local') return;
+        if (changes.bannerEnabled) setVisible(changes.bannerEnabled.newValue);
+        if (changes.bannerOpacity) setOpacity(changes.bannerOpacity.newValue);
+        if (changes.bannerShowHost) setShowHost(changes.bannerShowHost.newValue);
+    });
+})();

@@ -1,30 +1,45 @@
 {
   "name": "Environment Notifier",
-  "version": "2.0",
+  "version": "3.0",
   "manifest_version": 3,
-  "description": "Color-coded transparent banners for various Labflow environments on .com and .ca.",
+  "description": "Color-coded banner and toolbar badge for Catalyst/LabFlow environments (US and Canada). Click the toolbar icon to hide/show the banner.",
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
 
   "action": {
-    "default_title": "Environment Notifier"
+    "default_title": "Environment Notifier",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
   },
 
   "content_scripts": [
     {
       "matches": [
+        "*://*.catalystedu.com/*",
+        "*://*.catalystedu.ca/*",
+        "*://*.catalyst-edu.ca/*",
         "*://*.labflow.com/*",
         "*://*.labflow.ca/*",
-        "*://*.catalystedu.com/*",
-        "*://*.catalyst-edu.ca/*"
+        "*://*.labflow.localhost/*"
       ],
-      "js": ["content.js"]
+      "js": ["envs.js", "content.js"]
     }
   ],
-  "permissions": ["activeTab", "tabs"],
+  "permissions": ["tabs", "storage"],
   "host_permissions": [
+    "*://*.catalystedu.com/*",
+    "*://*.catalystedu.ca/*",
+    "*://*.catalyst-edu.ca/*",
     "*://*.labflow.com/*",
     "*://*.labflow.ca/*",
-    "*://*.catalystedu.com/*",
-    "*://*.catalyst-edu.ca/*"
+    "*://*.labflow.localhost/*"
   ],
   "background": {
     "service_worker": "background.js"
